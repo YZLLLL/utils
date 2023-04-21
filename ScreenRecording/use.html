@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <button class="start">开始录制</button>
+  <button class="stop">停止录制</button>
+</body>
+<script>
+  // 除了 webm 不支持其他格式,白写了
+  let mimeType = {
+    mp4: 'video/mp4',
+    mpeg: 'video/mpeg',
+    m4v: 'video/x-m4v',
+    mov :'video/quicktime',
+    wmv: 'video/x-ms-wmv',
+    webm: 'video/webm',
+    avi: 'video/x-msvideo'
+  }
+
+  let EXTENSION = {}
+  let select = document.createElement('select');
+  for (const key in mimeType) {
+    if(MediaRecorder.isTypeSupported(mimeType[key])){
+      console.log('支持'+key)
+      EXTENSION[mimeType[key]] = key
+      select.innerHTML += `<option value="${mimeType[key]}">${key}</option>`
+    }else{
+      console.log('不支持'+key)
+    }
+    
+  }
+  document.body.appendChild(select)
+
+
+  let recorder;
+  const start = document.querySelector('.start');
+  const stop = document.querySelector(".stop");
+
+  const options = {
+      audioBitsPerSecond: 128000,
+      videoBitsPerSecond: 2500000,
+      mimeType: 'video/webm',
+    };
+
+
+
+  start.addEventListener('click', ()=>{
+    navigator.mediaDevices.getDisplayMedia({video:true, audio:true}).then(stream=>{
+      let ext = EXTENSION[select.value];
+      recorder = new MediaRecorder(stream, Object.assign(options,{mimeType: select.value}));
+      let data = [];
+
+      recorder.ondataavailable = function (e){
+        data.push(e.data);
+      }
+
+      recorder.onstop = function (e){
+        this.stream.getTracks().forEach(track=>track.stop());
+        const blob = new Blob(data,{type:this.mimeType});
+        let link = document.createElement('a');
+
+        link.download = Date.now()+'.'+ext;
+        link.href = URL.createObjectURL(blob);
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        link.remove();
+      }
+
+      recorder.start()
+
+    })
+  })
+
+  stop.addEventListener('click',function(){
+    recorder.stop()
+  })
+</script>
+</html>
